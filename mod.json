@@ -1,0 +1,112 @@
+{
+	"geode": "5.11.2",
+	"gd": {
+		"win": "2.2081",
+		"android": "2.2081",
+		"mac": "2.2081",
+		"ios": "2.2081"
+	},
+	"id": "you.framebot",
+	"name": "FrameBot",
+	"version": "v1.0.0",
+	"developer": "you",
+	"description": "Frame-perfect macro bot with frame stepper, swift clicks and speedhack (desktop + mobile). Kills you near the end of the level if any assist was used.",
+	"settings": {
+		"speed": {
+			"type": "float",
+			"name": "Speed multiplier",
+			"description": "Stacks multiplicatively with other mods' speedhacks. 1.0 = off.",
+			"default": 1.0,
+			"min": 0.05,
+			"max": 10.0,
+			"control": {
+				"input": true,
+				"slider": true
+			}
+		},
+		"swift-cps": {
+			"type": "float",
+			"name": "Swift click CPS",
+			"description": "Clicks per second while Swift Clicks is on (frame-locked).",
+			"default": 30.0,
+			"min": 1.0,
+			"max": 120.0
+		},
+		"tps": {
+			"type": "int",
+			"name": "Physics TPS",
+			"description": "Physics ticks per second (GD default is 240). Used by the stepper and swift clicks.",
+			"default": 240,
+			"min": 60,
+			"max": 480
+		},
+		"kill-percent": {
+			"type": "float",
+			"name": "Kill at percent",
+			"description": "If any assist was used this attempt, you die at this percent.",
+			"default": 95.0,
+			"min": 50.0,
+			"max": 99.9
+		},
+		"show-menu": {
+			"type": "bool",
+			"name": "Show on-screen menu",
+			"description": "Touch buttons in the level (needed on mobile; optional on desktop).",
+			"default": true
+		},
+		"menu-x": {
+			"type": "float",
+			"name": "Menu X position (%)",
+			"description": "Horizontal position of the on-screen menu, as a percent of screen width. Applies next time you enter a level.",
+			"default": 5.0,
+			"min": 0.0,
+			"max": 100.0,
+			"control": {
+				"input": true,
+				"slider": true
+			}
+		},
+		"menu-y": {
+			"type": "float",
+			"name": "Menu Y position (%)",
+			"description": "Vertical position of the on-screen menu, as a percent of screen height (100 = top).",
+			"default": 85.0,
+			"min": 0.0,
+			"max": 100.0,
+			"control": {
+				"input": true,
+				"slider": true
+			}
+		},
+		"menu-scale": {
+			"type": "float",
+			"name": "Menu button size",
+			"description": "Scale of the on-screen buttons.",
+			"default": 1.0,
+			"min": 0.4,
+			"max": 2.5,
+			"control": {
+				"input": true,
+				"slider": true
+			}
+		},
+		"menu-opacity": {
+			"type": "float",
+			"name": "Menu opacity (%)",
+			"description": "How see-through the buttons are.",
+			"default": 75.0,
+			"min": 10.0,
+			"max": 100.0,
+			"control": {
+				"input": true,
+				"slider": true
+			}
+		},
+		"menu-horizontal": {
+			"type": "bool",
+			"name": "Horizontal menu",
+			"description": "Lay the buttons out in a row instead of a column.",
+			"default": false
+		}
+	}
+}
