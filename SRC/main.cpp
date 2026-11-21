@@ -12,6 +12,7 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/CCScheduler.hpp>
 #include <Geode/modify/UILayer.hpp>
+#include <Geode/modify/MenuLayer.hpp>
 #ifdef GEODE_IS_DESKTOP
 #include <Geode/modify/CCKeyboardDispatcher.hpp>
 #endif
@@ -264,9 +265,7 @@ class $modify(BotBaseLayer, GJBaseGameLayer) {
 class $modify(BotPlayLayer, PlayLayer) {
 	void setupHasCompleted() {
 		PlayLayer::setupHasCompleted();
-		log::info("FrameBot: level loaded, attaching menu");
-		Notification::create("FrameBot loaded")->show(); // remove once the menu shows up
-		buildMenu(m_uiLayer); // no-op if the UILayer hook already added it
+		log::info("FrameBot: level loaded");
 	}
 
 	void resetLevel() {
@@ -282,6 +281,16 @@ class $modify(BotPlayLayer, PlayLayer) {
 	// Anti-cheat: die near the end of the level if any assist was used.
 	void postUpdate(float dt) {
 		PlayLayer::postUpdate(dt);
+
+		// Attach the menu once the level scene is really running (a notification or
+		// node added earlier can get lost in the scene transition).
+		if (!m_uiLayer->getChildByID("framebot-menu"_spr)) {
+			buildMenu(m_uiLayer);
+			if (m_uiLayer->getChildByID("framebot-menu"_spr)) {
+				Notification::create("FrameBot active")->show();
+			}
+		}
+
 		auto& b = Bot::get();
 		if (!b.tainted || m_player1->m_isDead || m_level->isPlatformer()) return;
 		double limit = Mod::get()->getSettingValue<double>("kill-percent");
@@ -306,6 +315,22 @@ class $modify(BotUILayer, UILayer) {
 		if (!UILayer::init(layer)) return false;
 		if (typeinfo_cast<PlayLayer*>(layer)) buildMenu(this);
 		return true;
+	}
+};
+
+// Diagnostic: a one-time popup on the main menu proves the mod loaded. Delete once things work.
+class $modify(BotMenuLayer, MenuLayer) {
+	bool init() {
+		if (!MenuLayer::init()) return false;
+		this->scheduleOnce(schedule_selector(BotMenuLayer::showLoaded), 0.6f);
+		return true;
+	}
+
+	void showLoaded(float) {
+		static bool shown = false;
+		if (shown) return;
+		shown = true;
+		FLAlertLayer::create("FrameBot", "FrameBot loaded. Open a level to see the menu.", "OK")->show();
 	}
 };
 
