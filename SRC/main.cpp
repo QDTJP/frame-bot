@@ -11,6 +11,7 @@
 #include <Geode/modify/GJBaseGameLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/CCScheduler.hpp>
+#include <Geode/modify/UILayer.hpp>
 #ifdef GEODE_IS_DESKTOP
 #include <Geode/modify/CCKeyboardDispatcher.hpp>
 #endif
@@ -141,6 +142,56 @@ namespace actions {
 	}
 }
 
+static void buildMenu(CCNode* parent) {
+	auto mod = Mod::get();
+	if (!mod->getSettingValue<bool>("show-menu")) return;
+	if (parent->getChildByID("framebot-menu"_spr)) return;
+
+	auto win = CCDirector::get()->getWinSize();
+	float px = static_cast<float>(mod->getSettingValue<double>("menu-x")) / 100.f * win.width;
+	float py = static_cast<float>(mod->getSettingValue<double>("menu-y")) / 100.f * win.height;
+	float scale = static_cast<float>(mod->getSettingValue<double>("menu-scale"));
+	GLubyte opacity = static_cast<GLubyte>(mod->getSettingValue<double>("menu-opacity") / 100.0 * 255.0);
+	bool horizontal = mod->getSettingValue<bool>("menu-horizontal");
+
+	auto menu = CCMenu::create();
+	menu->setID("framebot-menu"_spr);
+	menu->setPosition({0.f, 0.f});
+	parent->addChild(menu, 100);
+
+	auto panel = std::make_shared<std::vector<CCMenuItemSpriteExtra*>>(); // all but the collapse button
+	int index = 0;
+
+	auto addBtn = [&](char const* text, std::function<void()> fn, bool inPanel = true) {
+		auto spr = ButtonSprite::create(text, 44, true, "bigFont.fnt", "GJ_button_04.png", 24.f, .5f);
+		spr->setOpacity(opacity);
+		auto item = CCMenuItemExt::createSpriteExtra(spr, [fn = std::move(fn)](CCMenuItemSpriteExtra*) { fn(); });
+		item->setScale(scale);
+		// Column steps down, row steps right.
+		float step = (horizontal ? 52.f : 30.f) * scale;
+		item->setPosition(horizontal
+			? CCPoint{px + index * step, py}
+			: CCPoint{px, py - index * step});
+		index++;
+		menu->addChild(item);
+		if (inPanel) panel->push_back(item);
+		return item;
+	};
+
+	// Collapse/expand so the menu never blocks the screen while playing.
+	addBtn("FB", [panel]() {
+		if (panel->empty()) return;
+		bool show = !(*panel)[0]->isVisible();
+		for (auto p : *panel) p->setVisible(show);
+	}, false);
+
+	addBtn("Step", [] { actions::stepper(); });
+	addBtn("Next", [] { actions::step(); });
+	addBtn("Rec", [] { actions::record(); });
+	addBtn("Play", [] { actions::replay(); });
+	addBtn("Swift", [] { actions::swift(); });
+}
+
 class $modify(BotBaseLayer, GJBaseGameLayer) {
 	// Frame stepper: while on, the game only advances when a step is requested.
 	void update(float dt) {
@@ -213,52 +264,9 @@ class $modify(BotBaseLayer, GJBaseGameLayer) {
 class $modify(BotPlayLayer, PlayLayer) {
 	void setupHasCompleted() {
 		PlayLayer::setupHasCompleted();
-		auto mod = Mod::get();
-		if (!mod->getSettingValue<bool>("show-menu")) return;
-
-		auto win = CCDirector::get()->getWinSize();
-		float px = static_cast<float>(mod->getSettingValue<double>("menu-x")) / 100.f * win.width;
-		float py = static_cast<float>(mod->getSettingValue<double>("menu-y")) / 100.f * win.height;
-		float scale = static_cast<float>(mod->getSettingValue<double>("menu-scale"));
-		GLubyte opacity = static_cast<GLubyte>(mod->getSettingValue<double>("menu-opacity") / 100.0 * 255.0);
-		bool horizontal = mod->getSettingValue<bool>("menu-horizontal");
-
-		auto menu = CCMenu::create();
-		menu->setID("framebot-menu"_spr);
-		menu->setPosition({0.f, 0.f});
-		m_uiLayer->addChild(menu, 100);
-
-		auto panel = std::make_shared<std::vector<CCMenuItemSpriteExtra*>>(); // all but the collapse button
-		int index = 0;
-
-		auto addBtn = [&](char const* text, std::function<void()> fn, bool inPanel = true) {
-			auto spr = ButtonSprite::create(text, 44, true, "bigFont.fnt", "GJ_button_04.png", 24.f, .5f);
-			spr->setOpacity(opacity);
-			auto item = CCMenuItemExt::createSpriteExtra(spr, [fn = std::move(fn)](CCMenuItemSpriteExtra*) { fn(); });
-			item->setScale(scale);
-			// Column steps down, row steps right.
-			float step = (horizontal ? 52.f : 30.f) * scale;
-			item->setPosition(horizontal
-				? CCPoint{px + index * step, py}
-				: CCPoint{px, py - index * step});
-			index++;
-			menu->addChild(item);
-			if (inPanel) panel->push_back(item);
-			return item;
-		};
-
-		// Collapse/expand so the menu never blocks the screen while playing.
-		addBtn("FB", [panel]() {
-			if (panel->empty()) return;
-			bool show = !(*panel)[0]->isVisible();
-			for (auto p : *panel) p->setVisible(show);
-		}, false);
-
-		addBtn("Step", [] { actions::stepper(); });
-		addBtn("Next", [] { actions::step(); });
-		addBtn("Rec", [] { actions::record(); });
-		addBtn("Play", [] { actions::replay(); });
-		addBtn("Swift", [] { actions::swift(); });
+		log::info("FrameBot: level loaded, attaching menu");
+		Notification::create("FrameBot loaded")->show(); // remove once the menu shows up
+		buildMenu(m_uiLayer); // no-op if the UILayer hook already added it
 	}
 
 	void resetLevel() {
@@ -289,6 +297,15 @@ class $modify(BotPlayLayer, PlayLayer) {
 		b.stepper = false;
 		b.swift = false;
 		PlayLayer::onQuit();
+	}
+};
+
+// Attach the menu as soon as the in-level UI is created (most reliable spot).
+class $modify(BotUILayer, UILayer) {
+	bool init(GJBaseGameLayer* layer) {
+		if (!UILayer::init(layer)) return false;
+		if (typeinfo_cast<PlayLayer*>(layer)) buildMenu(this);
+		return true;
 	}
 };
 
